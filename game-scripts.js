@@ -1,3 +1,24 @@
+// ZZ Games: steer with the arrow keys or WASD (the game only had mouse / touch steering)
+function zzKeyboard(ti) {
+    var keys = {};
+    var steer = { ArrowUp: 1, ArrowDown: 1, ArrowLeft: 1, ArrowRight: 1, KeyW: 1, KeyA: 1, KeyS: 1, KeyD: 1 };
+    window.addEventListener("keydown", function (e) { if (steer[e.code]) { keys[e.code] = 1; e.preventDefault(); } });
+    window.addEventListener("keyup", function (e) { keys[e.code] = 0; });
+    window.addEventListener("blur", function () { keys = {}; });
+    ti.app.on("update", function () {
+        if (!ti.controlsEnabled) return;
+        var x = (keys.ArrowRight || keys.KeyD ? 1 : 0) - (keys.ArrowLeft || keys.KeyA ? 1 : 0);
+        var y = (keys.ArrowDown || keys.KeyS ? 1 : 0) - (keys.ArrowUp || keys.KeyW ? 1 : 0);
+        if (x || y) {
+            var l = Math.sqrt(x * x + y * y);
+            ti.input.set(-y / l, x / l);   // same mapping the game uses for the mouse (screen direction)
+            ti._zzKeys = true;
+        } else if (ti._zzKeys) {
+            ti._zzKeys = false;
+            if (ti.showStick) ti.input.set(0, 0);
+        }
+    });
+}
 var TouchInput = pc.createScript("touchInput");
 TouchInput.attributes.add("controlsRoot", {
     type: "entity"
@@ -23,7 +44,7 @@ TouchInput.attributes.add("controlsRoot", {
     }), this)) : (console.log("this device does not support touch. will do mouse control"), this.showStick = !1, this.controlsRoot.enabled = !1, this.app.mouse.on(pc.EVENT_MOUSEMOVE, (function(t) {
         this.controlsEnabled && (t.event.stopImmediatePropagation(), this.center.set(t.element.clientWidth / 2, t.element.clientHeight / 2), this.pointer.set(t.x, t.y), this.input = this.input.sub2(this.pointer, this.center).normalize(), this.input.set(-this.input.y, this.input.x))
     }), this)) : (console.log("this device does support touch"), this.showStick = !0, this.overlay.element.on(pc.EVENT_TOUCHSTART, this._startDrag, this), this.app.touch.on(pc.EVENT_TOUCHMOVE, this._moveDrag, this), this.app.touch.on(pc.EVENT_TOUCHEND, this._endDrag, this), this.app.touch.on(pc.EVENT_TOUCHCANCEL, this._endDrag, this))
-}, TouchInput.prototype.disableControls = function() {
+}, (function () { var o = TouchInput.prototype.initialize; TouchInput.prototype.initialize = function () { o.call(this); zzKeyboard(this); }; })(), TouchInput.prototype.disableControls = function() {
     this.controlsEnabled = !1
 }, TouchInput.prototype.enableControls = function() {
     this.controlsEnabled = !0
